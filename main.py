@@ -10,23 +10,14 @@ from pprint import pprint
 chrome_driver_path = "/Users/curlos/Desktop/Development/chromedriver"
 
 
-def get_all_killstreaks(url):
-    page = requests.get(url)
-    soup = BeautifulSoup(page.content, 'html.parser')
-    killstreak_img_elems = soup.select('.blog-image img')
-    save_dir = 'Killstreaks'
-
-    for killstreak_img_elem in killstreak_img_elems:
-        filename = killstreak_img_elem['src'].split('-')[-1].strip()
-        img_link = 'https://blog.activision.com' + killstreak_img_elem['src']
-        get_one_file(filename, img_link, save_dir)
-
-
 def get_all_weapons(url):
     page = requests.get(url)
     soup = BeautifulSoup(page.content, 'html.parser')
     weapon_link_elems = soup.select('.item-image a')
-    save_dir = 'Guns'
+    save_dir = 'Weapons'
+
+    weapons = {'Assault Rifles': [], 'SMGs': [], 'Shotguns': [], 'LMGs': [
+    ], 'Marksman Rifles': [], 'Sniper Rifles': [], 'Handguns': [], 'Launchers': [], 'Melee': []}
 
     options = Options()
     options.headless = True
@@ -39,23 +30,27 @@ def get_all_weapons(url):
         driver.get(weapon_url)
         weapon_img_elem = driver.find_elements_by_css_selector(
             '.item-image img')[0]
-        get_one_file(f'{str(i).zfill(3)}.jpg',
-                     weapon_img_elem.get_attribute('src'), 'Weapons')
+
+        weapon_data = get_one_weapon_data(weapon_url, driver)
+        weapons[weapon_data['class']].append(weapon_data)
+
+        pprint(weapon_data)
+        print('\n')
+        save_to_json(weapons, 'weapons.json')
+        # download_file(f'{str(i).zfill(3)}.jpg',
+        #                weapon_img_elem.get_attribute('src'), save_dir)
 
         i += 1
+    
+    print('Finished getting all weapons!')
 
 
-def get_one_weapon_data(url):
-    weapons = {'Assault Rifles': [], 'Sub Machine Guns': [], 'Shotguns': [], 'Light Machine Guns': [
-    ], 'Marksman Rifles': [], 'Sniper Rifles': [], 'Handguns': [], 'Rocket Launchers': [], 'Melee': []}
-    options = Options()
-    options.headless = True
-    driver = webdriver.Chrome(
-        options=options, executable_path=chrome_driver_path)
-
-    driver.get(url)
+def get_one_weapon_data(url, driver):
     weapon_name = driver.find_element_by_css_selector(
         'h1.contentheading').get_attribute("textContent").strip()
+
+    weapon_img_elem_link = driver.find_elements_by_css_selector(
+        '.item-image img')[0].get_attribute('src')
 
     weapon_class = driver.find_element_by_css_selector(
         'a[title^="Weapon Class"]').get_attribute("textContent").strip()
@@ -89,8 +84,10 @@ def get_one_weapon_data(url):
     weapon_description = driver.find_element_by_css_selector(
         '.article-content p').get_attribute("textContent").strip()
 
-    weapons[weapon_class].append({
+    weapon = {
         'name': weapon_name,
+        'description': weapon_description,
+        'image': weapon_img_elem_link,
         'class': weapon_class,
         'accuracy': int(weapon_accuracy),
         'damage': int(weapon_damage),
@@ -99,13 +96,34 @@ def get_one_weapon_data(url):
         'mobility': int(weapon_mobility),
         'control': int(weapon_control),
         'overall': rounded_overall,
-        'description': weapon_description
-    })
+    }
 
-    pprint(weapons)
+    return weapon
+
+def save_to_json(dictionary, filename):
+    print('Exporting dictionary to JSON file...')
+
+    try:
+        with open(filename, "w") as outputFile:
+            json.dump(dictionary, outputFile, indent=4)
+    except:
+        print('Error occured!')
+
+    print('JSON file created!')
 
 
-def get_one_file(filename, img_link, save_dir):
+def get_all_killstreaks(url):
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, 'html.parser')
+    killstreak_img_elems = soup.select('.blog-image img')
+    save_dir = 'Killstreaks'
+
+    for killstreak_img_elem in killstreak_img_elems:
+        filename = killstreak_img_elem['src'].split('-')[-1].strip()
+        img_link = 'https://blog.activision.com' + killstreak_img_elem['src']
+        download_file(filename, img_link, save_dir)
+
+def download_file(filename, img_link, save_dir):
 
     print(f"Downloading {filename}...", end="")
 
@@ -125,7 +143,4 @@ def get_one_file(filename, img_link, save_dir):
 
 # get_all_killstreaks('https://blog.activision.com/call-of-duty/2019-10/The-Basics-of-Call-of-Duty-Modern-Warfare-Killstreaks')
 
-# get_all_weapons('https://www.gamesatlas.com/cod-modern-warfare/weapons/')
-
-get_one_weapon_data(
-    'https://www.gamesatlas.com/cod-modern-warfare/weapons/combat-knife')
+get_all_weapons('https://www.gamesatlas.com/cod-modern-warfare/weapons/')
