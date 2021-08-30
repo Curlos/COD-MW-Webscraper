@@ -13,11 +13,6 @@ def get_all_killstreaks(url):
     for killstreak_img_elem in killstreak_img_elems:
         filename = killstreak_img_elem['src'].split('-')[-1].strip()
         img_link = 'https://blog.activision.com' + killstreak_img_elem['src']
-
-        print(filename)
-        print(img_link)
-        print('')
-
         get_one_killstreak(filename, img_link, save_dir)
 
 
